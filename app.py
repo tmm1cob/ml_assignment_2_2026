@@ -258,7 +258,7 @@ elif uploaded_file is not None:
 
 else:
 
-    st.info("Please upload a CSV file from the sidebar.")
+    st.info("Please upload a CSV file from the sidebar or Load data default data set.")
     st.stop()
 
 
