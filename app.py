@@ -633,17 +633,6 @@ try:
         )
 
 
-    # --------------------------------------------------
-    # 14. Footer
-    # --------------------------------------------------
-
-    st.divider()
-
-    st.caption(
-        "Target encoding: 0 = Benign | 1 = Malignant. "
-        "All models are loaded from saved artifacts. "
-        "No retraining is performed by this application."
-    )
 
 
 except Exception as exc:
