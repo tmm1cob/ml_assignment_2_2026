@@ -219,9 +219,10 @@ with st.sidebar:
     data_source = st.radio(
         "Select data source",
         [
-            "Load Sample Test Data",
-            "Upload Custom CSV"
-        ]
+            "Upload Custom CSV",
+            "Load Sample Test Data"
+        ],
+        index=0
     )
 
     uploaded_file = None
@@ -263,7 +264,7 @@ else:
 
 
 # --------------------------------------------------
-# 8. Validate Uploaded or Sample Dataset
+# 8. Validate Dataset
 # --------------------------------------------------
 
 try:
@@ -362,7 +363,6 @@ try:
 
         comparison_results = []
 
-        # Evaluate all five saved models
         for model_name, model in models.items():
 
             if model_name in scaled_models:
@@ -394,13 +394,11 @@ try:
 
         comparison_df = pd.DataFrame(comparison_results)
 
-        # Sort by accuracy
         comparison_df = comparison_df.sort_values(
             by="Accuracy",
             ascending=False
         ).reset_index(drop=True)
 
-        # Performance table
         st.markdown("### Model Performance Summary")
 
         st.dataframe(
@@ -424,7 +422,7 @@ try:
             f"({best_model['Accuracy']:.4f})"
         )
 
-        # Best model for individual metrics
+        # Best performance by metric
         st.markdown("### Best Performance by Metric")
 
         metric_names = [
@@ -449,7 +447,7 @@ try:
                 best_row["Model"]
             )
 
-        # Performance comparison chart
+        # Performance chart
         st.markdown("### Performance Comparison")
 
         chart_df = comparison_df.set_index("Model")[
