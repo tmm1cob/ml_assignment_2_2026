@@ -105,7 +105,7 @@ div[data-testid="stSidebar"] {
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="main-title">🔬 Breast Cancer Classification</div>',
+    '<div class="main-title">🔬 Breast Cancer Classification - ML Assignment - Mohamed Shareef </div>',
     unsafe_allow_html=True
 )
 
