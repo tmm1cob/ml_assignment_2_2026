@@ -13,11 +13,13 @@ from sklearn.metrics import (
     f1_score,
     matthews_corrcoef,
     confusion_matrix,
-    ConfusionMatrixDisplay
+    ConfusionMatrixDisplay,
+    classification_report
 )
 
+
 # --------------------------------------------------
-# 1. Page configuration
+# 1. Page Configuration
 # --------------------------------------------------
 
 st.set_page_config(
@@ -25,6 +27,7 @@ st.set_page_config(
     page_icon="🔬",
     layout="wide"
 )
+
 
 # --------------------------------------------------
 # 2. Custom CSS
@@ -60,7 +63,7 @@ st.markdown("""
 
 .metric-card {
     background-color: white;
-    padding: 20px;
+    padding: 18px;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 2px 6px rgba(0,0,0,0.04);
@@ -73,7 +76,7 @@ st.markdown("""
 }
 
 .metric-value {
-    font-size: 27px;
+    font-size: 25px;
     font-weight: 700;
     color: #172554;
     margin-top: 5px;
@@ -119,7 +122,7 @@ st.divider()
 
 
 # --------------------------------------------------
-# 4. Model configuration
+# 4. Model Configuration
 # --------------------------------------------------
 
 MODEL_DIR = "model"
@@ -132,6 +135,7 @@ model_files = {
     "Support Vector Machine": "support_vector_machine.joblib"
 }
 
+# Models requiring StandardScaler
 scaled_models = {
     "Logistic Regression",
     "KNN",
@@ -140,7 +144,7 @@ scaled_models = {
 
 
 # --------------------------------------------------
-# 5. Load saved models
+# 5. Load Saved Models and Scaler
 # --------------------------------------------------
 
 @st.cache_resource
@@ -167,7 +171,7 @@ except Exception as exc:
 
 
 # --------------------------------------------------
-# 6. Sidebar
+# 6. Sidebar Dashboard Menu
 # --------------------------------------------------
 
 with st.sidebar:
@@ -176,20 +180,36 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.subheader("Model Selection")
+    st.subheader("Dashboard Menu")
 
-    selected_model = st.selectbox(
-        "Choose a classifier",
-        list(model_files.keys())
+    menu_option = st.radio(
+        "Select View",
+        [
+            "Single Model Evaluation",
+            "Compare All Models"
+        ]
     )
 
-    preprocessing = (
-        "Standard Scaling"
-        if selected_model in scaled_models
-        else "Original Features"
-    )
+    st.markdown("---")
 
-    st.info(f"Preprocessing: {preprocessing}")
+    selected_model = None
+
+    if menu_option == "Single Model Evaluation":
+
+        st.subheader("Model Selection")
+
+        selected_model = st.selectbox(
+            "Choose a classifier",
+            list(model_files.keys())
+        )
+
+        preprocessing = (
+            "Standard Scaling"
+            if selected_model in scaled_models
+            else "Original Features"
+        )
+
+        st.info(f"Preprocessing: {preprocessing}")
 
     st.markdown("---")
 
@@ -200,74 +220,75 @@ with st.sidebar:
         type=["csv"]
     )
 
-    st.markdown("---")
-
-    st.caption(
-    
-        "Machine Learning "
-    )
-
 
 # --------------------------------------------------
-# 7. Upload and validate data
+# 7. Initial Screen
 # --------------------------------------------------
 
 if uploaded_file is None:
 
-    st.info("👈 Upload your test CSV from the sidebar to begin.")
+    st.info(
+        "Upload your test CSV from the sidebar to begin."
+    )
 
-    st.markdown("### About this project")
+    st.markdown("### About this Project")
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown(
-            '<div class="info-card">'
-            '<h3>5</h3>'
-            '<b>Classification Models</b>'
-            '<p>Five machine learning algorithms are compared.</p>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+        <div class="info-card">
+            <h3>5</h3>
+            <b>Classification Models</b>
+            <p>Five machine learning algorithms are compared.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col2:
-        st.markdown(
-            '<div class="info-card">'
-            '<h3>30</h3>'
-            '<b>Input Features</b>'
-            '<p>Cell nucleus measurements are used for prediction.</p>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+        <div class="info-card">
+            <h3>30</h3>
+            <b>Input Features</b>
+            <p>Cell nucleus measurements are used for classification.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     with col3:
-        st.markdown(
-            '<div class="info-card">'
-            '<h3>6</h3>'
-            '<b>Evaluation Metrics</b>'
-            '<p>Different metrics are used to evaluate performance.</p>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        st.markdown("""
+        <div class="info-card">
+            <h3>6</h3>
+            <b>Evaluation Metrics</b>
+            <p>Different metrics are used to evaluate model performance.</p>
+        </div>
+        """, unsafe_allow_html=True)
 
     st.stop()
 
+
+# --------------------------------------------------
+# 8. Read and Validate Uploaded Dataset
+# --------------------------------------------------
 
 try:
 
     test_df = pd.read_csv(uploaded_file)
 
     if "diagnosis" not in test_df.columns:
-        st.error("The CSV must contain a diagnosis column.")
+        st.error("The CSV must contain a 'diagnosis' column.")
         st.stop()
 
+    # Get expected feature names from the reference CSV
+    reference_columns = pd.read_csv(
+        "test_data.csv",
+        nrows=0
+    ).columns
+
     feature_names = [
-        col for col in pd.read_csv(
-            "test_data.csv", nrows=0
-        ).columns
+        col for col in reference_columns
         if col != "diagnosis"
     ]
 
+    # Check missing features
     missing = [
         col for col in feature_names
         if col not in test_df.columns
@@ -281,28 +302,41 @@ try:
         st.error("The uploaded CSV is empty.")
         st.stop()
 
+    # Separate input features and target
     X_test = test_df[feature_names]
     y_test = test_df["diagnosis"]
 
+    # Check missing values
     if X_test.isnull().any().any() or y_test.isnull().any():
         st.error("The dataset contains missing values.")
         st.stop()
 
-    if not set(y_test.unique()).issubset({0, 1}):
-        st.error("Target encoding must be 0 = benign, 1 = malignant.")
-        st.stop()
-
-    if y_test.nunique() < 2:
-        st.error("Both target classes are required to calculate AUC.")
-        st.stop()
-
-    if not all(pd.api.types.is_numeric_dtype(X_test[c]) for c in feature_names):
+    # Check numeric input features
+    if not all(
+        pd.api.types.is_numeric_dtype(X_test[col])
+        for col in feature_names
+    ):
         st.error("All input features must be numeric.")
+        st.stop()
+
+    # Check target encoding
+    if not set(y_test.unique()).issubset({0, 1}):
+        st.error(
+            "Diagnosis must use 0 = benign and 1 = malignant."
+        )
+        st.stop()
+
+    # Both classes are required for AUC
+    if y_test.nunique() < 2:
+        st.error(
+            "The test dataset must contain both target classes "
+            "to calculate AUC."
+        )
         st.stop()
 
 
     # --------------------------------------------------
-    # 8. Dataset summary
+    # 9. Dataset Overview
     # --------------------------------------------------
 
     st.markdown(
@@ -319,24 +353,165 @@ try:
 
 
     # --------------------------------------------------
-    # 9. Model prediction
+    # 10. Compare All Models
     # --------------------------------------------------
+
+    if menu_option == "Compare All Models":
+
+        st.markdown(
+            '<div class="section-title">'
+            '📊 Comparison of All Classification Models'
+            '</div>',
+            unsafe_allow_html=True
+        )
+
+        comparison_results = []
+
+        # Evaluate all five saved models
+        for model_name, model in models.items():
+
+            if model_name in scaled_models:
+                X_eval = scaler.transform(X_test)
+            else:
+                X_eval = X_test
+
+            y_pred = model.predict(X_eval)
+
+            y_prob = model.predict_proba(X_eval)[:, 1]
+
+            results = {
+                "Model": model_name,
+                "Accuracy": accuracy_score(y_test, y_pred),
+                "AUC": roc_auc_score(y_test, y_prob),
+                "Precision": precision_score(
+                    y_test, y_pred, zero_division=0
+                ),
+                "Recall": recall_score(
+                    y_test, y_pred, zero_division=0
+                ),
+                "F1 Score": f1_score(
+                    y_test, y_pred, zero_division=0
+                ),
+                "MCC": matthews_corrcoef(y_test, y_pred)
+            }
+
+            comparison_results.append(results)
+
+        comparison_df = pd.DataFrame(comparison_results)
+
+        # Sort by accuracy
+        comparison_df = comparison_df.sort_values(
+            by="Accuracy",
+            ascending=False
+        ).reset_index(drop=True)
+
+        # Performance table
+        st.markdown("### Model Performance Summary")
+
+        st.dataframe(
+            comparison_df.style.format({
+                "Accuracy": "{:.4f}",
+                "AUC": "{:.4f}",
+                "Precision": "{:.4f}",
+                "Recall": "{:.4f}",
+                "F1 Score": "{:.4f}",
+                "MCC": "{:.4f}"
+            }),
+            use_container_width=True,
+            hide_index=True
+        )
+
+        # Best model by accuracy
+        best_model = comparison_df.iloc[0]
+
+        st.success(
+            f"Best model by accuracy: {best_model['Model']} "
+            f"({best_model['Accuracy']:.4f})"
+        )
+
+        # Best model for individual metrics
+        st.markdown("### Best Performance by Metric")
+
+        metric_names = [
+            "Accuracy",
+            "AUC",
+            "Precision",
+            "Recall",
+            "F1 Score",
+            "MCC"
+        ]
+
+        best_cols = st.columns(3)
+
+        for i, metric in enumerate(metric_names):
+
+            best_index = comparison_df[metric].idxmax()
+            best_row = comparison_df.loc[best_index]
+
+            best_cols[i % 3].metric(
+                metric,
+                f"{best_row[metric]:.4f}",
+                best_row["Model"]
+            )
+
+        # Performance comparison chart
+        st.markdown("### Performance Comparison")
+
+        chart_df = comparison_df.set_index("Model")[
+            ["Accuracy", "AUC", "F1 Score"]
+        ]
+
+        st.bar_chart(
+            chart_df,
+            use_container_width=True
+        )
+
+        # Complete metrics comparison chart
+        with st.expander("View all six metrics"):
+
+            all_metrics = comparison_df.set_index("Model")[
+                metric_names
+            ]
+
+            st.bar_chart(
+                all_metrics,
+                use_container_width=True
+            )
+
+        st.caption(
+            "All five models are evaluated using the same uploaded "
+            "test dataset and their respective preprocessing methods. "
+            "No model retraining is performed."
+        )
+
+        st.stop()
+
+
+    # --------------------------------------------------
+    # 11. Single Model Evaluation
+    # --------------------------------------------------
+
+    st.markdown(
+        '<div class="section-title">🎯 Model Performance</div>',
+        unsafe_allow_html=True
+    )
+
+    st.caption(f"Selected classifier: {selected_model}")
 
     model = models[selected_model]
 
+    # Apply model-specific preprocessing
     if selected_model in scaled_models:
         X_eval = scaler.transform(X_test)
     else:
         X_eval = X_test
 
+    # Predictions
     y_pred = model.predict(X_eval)
+
     y_prob = model.predict_proba(X_eval)[:, 1]
 
-
-    # --------------------------------------------------
-    # 10. Evaluation metrics
-    # --------------------------------------------------
-
+    # Calculate metrics
     metrics = {
         "Accuracy": accuracy_score(y_test, y_pred),
         "AUC": roc_auc_score(y_test, y_prob),
@@ -352,13 +527,7 @@ try:
         "MCC": matthews_corrcoef(y_test, y_pred)
     }
 
-    st.markdown(
-        '<div class="section-title">🎯 Model Performance</div>',
-        unsafe_allow_html=True
-    )
-
-    st.caption(f"Selected classifier: {selected_model}")
-
+    # Display metric cards
     metric_cols = st.columns(6)
 
     for i, (name, value) in enumerate(metrics.items()):
@@ -375,11 +544,13 @@ try:
 
 
     # --------------------------------------------------
-    # 11. Confusion matrix and class report
+    # 12. Confusion Matrix and Classification Report
     # --------------------------------------------------
 
     st.markdown(
-        '<div class="section-title">📈 Model Evaluation Details</div>',
+        '<div class="section-title">'
+        '📈 Model Evaluation Details'
+        '</div>',
         unsafe_allow_html=True
     )
 
@@ -389,7 +560,9 @@ try:
     ])
 
     cm = confusion_matrix(
-        y_test, y_pred, labels=[0, 1]
+        y_test,
+        y_pred,
+        labels=[0, 1]
     )
 
     with tab1:
@@ -413,9 +586,11 @@ try:
             )
 
             ax.set_title("Confusion Matrix")
+
             fig.tight_layout()
 
             st.pyplot(fig)
+
             plt.close(fig)
 
         with col2:
@@ -431,8 +606,6 @@ try:
 
 
     with tab2:
-
-        from sklearn.metrics import classification_report
 
         report = classification_report(
             y_test,
@@ -451,7 +624,7 @@ try:
 
 
     # --------------------------------------------------
-    # 12. Dataset preview
+    # 13. Dataset Preview
     # --------------------------------------------------
 
     st.markdown(
@@ -468,7 +641,7 @@ try:
 
 
     # --------------------------------------------------
-    # 13. Footer
+    # 14. Footer
     # --------------------------------------------------
 
     st.divider()
