@@ -203,8 +203,8 @@ with st.sidebar:
     st.markdown("---")
 
     st.caption(
-        "BITS WILP M.Tech AI & ML\n\n"
-        "Machine Learning Assignment 2"
+    
+        "Machine Learning "
     )
 
 
