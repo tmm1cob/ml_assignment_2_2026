@@ -599,7 +599,8 @@ try:
 
     with tab2:
 
-        st.markdown("### Required Evaluation Metrics")
+        st.markdown("### Model Performance")
+        st.caption("Circular gauges show the evaluation score for each metric.")
 
         report_metrics = {
             "Accuracy": accuracy_score(y_test, y_pred),
@@ -618,20 +619,72 @@ try:
             )
         }
 
-        report_df = pd.DataFrame(
-            list(report_metrics.items()),
-            columns=["Evaluation Metric", "Score"]
-        )
+        # Display six circular gauges in a 3-column layout.
+        # MCC ranges from -1 to +1, while the other metrics range from 0 to 1.
+        gauge_cols = st.columns(3)
 
-        report_df["Score"] = report_df["Score"].map(
-            lambda x: f"{x:.4f}"
-        )
+        for i, (metric_name, metric_value) in enumerate(report_metrics.items()):
 
-        st.dataframe(
-            report_df,
-            use_container_width=True,
-            hide_index=True
-        )
+            if metric_name == "Matthews Correlation Coefficient (MCC)":
+                gauge_progress = (metric_value + 1) / 2
+                display_value = f"{metric_value:.3f}"
+                gauge_color = (
+                    "#16a34a" if metric_value >= 0.5
+                    else "#f59e0b" if metric_value >= 0
+                    else "#dc2626"
+                )
+            else:
+                gauge_progress = metric_value
+                display_value = f"{metric_value * 100:.1f}%"
+                gauge_color = (
+                    "#16a34a" if metric_value >= 0.9
+                    else "#f59e0b" if metric_value >= 0.7
+                    else "#dc2626"
+                )
+
+            gauge_progress = max(0, min(1, gauge_progress))
+            circumference = 2 * 3.141592653589793 * 42
+            dash_length = circumference * gauge_progress
+
+            with gauge_cols[i % 3]:
+                st.markdown(
+                    f"""
+                    <div style="
+                        background: white;
+                        border: 1px solid #e2e8f0;
+                        border-radius: 14px;
+                        padding: 18px 10px 14px 10px;
+                        margin: 6px 0 12px 0;
+                        text-align: center;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+                    ">
+                        <svg width="150" height="150" viewBox="0 0 100 100" role="img" aria-label="{metric_name}: {display_value}">
+                            <circle cx="50" cy="50" r="42"
+                                fill="none" stroke="#e8edf4" stroke-width="9" />
+                            <circle cx="50" cy="50" r="42"
+                                fill="none" stroke="{gauge_color}" stroke-width="9"
+                                stroke-linecap="round"
+                                stroke-dasharray="{dash_length:.2f} {circumference:.2f}"
+                                transform="rotate(-90 50 50)" />
+                            <text x="50" y="55" text-anchor="middle"
+                                font-size="15" font-weight="700" fill="#172554">
+                                {display_value}
+                            </text>
+                        </svg>
+                        <div style="
+                            color: #334155;
+                            font-size: 14px;
+                            font-weight: 650;
+                            margin-top: 4px;
+                            min-height: 38px;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                        ">{metric_name}</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
 
 
     # --------------------------------------------------
