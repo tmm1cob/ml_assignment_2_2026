@@ -213,71 +213,66 @@ with st.sidebar:
 
     st.markdown("---")
 
-    st.subheader("Dataset")
+    # Data source selection
+    st.subheader("Data Source")
 
-    uploaded_file = st.file_uploader(
-        "Upload test CSV",
-        type=["csv"]
+    data_source = st.radio(
+        "Select data source",
+        [
+            "Load Sample Test Data",
+            "Upload Custom CSV"
+        ]
     )
+
+    uploaded_file = None
+
+    if data_source == "Upload Custom CSV":
+
+        uploaded_file = st.file_uploader(
+            "Upload test CSV",
+            type=["csv"]
+        )
 
 
 # --------------------------------------------------
-# 7. Initial Screen
+# 7. Initial Screen and Data Loading
 # --------------------------------------------------
 
-if uploaded_file is None:
+if data_source == "Load Sample Test Data":
 
-    st.info(
-        "Upload your test CSV from the sidebar to begin."
-    )
+    try:
+        test_df = pd.read_csv("test_data.csv")
 
-    st.markdown("### About this Project")
+    except Exception as exc:
+        st.error(f"Could not load sample test data: {exc}")
+        st.stop()
 
-    col1, col2, col3 = st.columns(3)
+elif uploaded_file is not None:
 
-    with col1:
-        st.markdown("""
-        <div class="info-card">
-            <h3>5</h3>
-            <b>Classification Models</b>
-            <p>Five machine learning algorithms are compared.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    try:
+        test_df = pd.read_csv(uploaded_file)
 
-    with col2:
-        st.markdown("""
-        <div class="info-card">
-            <h3>30</h3>
-            <b>Input Features</b>
-            <p>Cell nucleus measurements are used for classification.</p>
-        </div>
-        """, unsafe_allow_html=True)
+    except Exception as exc:
+        st.error(f"Could not read uploaded CSV: {exc}")
+        st.stop()
 
-    with col3:
-        st.markdown("""
-        <div class="info-card">
-            <h3>6</h3>
-            <b>Evaluation Metrics</b>
-            <p>Different metrics are used to evaluate model performance.</p>
-        </div>
-        """, unsafe_allow_html=True)
+else:
 
+    st.info("Please upload a CSV file from the sidebar.")
     st.stop()
 
 
 # --------------------------------------------------
-# 8. Read and Validate Uploaded Dataset
+# 8. Validate Uploaded or Sample Dataset
 # --------------------------------------------------
 
 try:
-
-    test_df = pd.read_csv(uploaded_file)
 
     if "diagnosis" not in test_df.columns:
         st.error("The CSV must contain a 'diagnosis' column.")
         st.stop()
 
-    # Get expected feature names from the reference CSV
+    # Get expected feature names from reference CSV
     reference_columns = pd.read_csv(
         "test_data.csv",
         nrows=0
@@ -299,7 +294,7 @@ try:
         st.stop()
 
     if test_df.empty:
-        st.error("The uploaded CSV is empty.")
+        st.error("The dataset is empty.")
         st.stop()
 
     # Separate input features and target
@@ -326,7 +321,7 @@ try:
         )
         st.stop()
 
-    # Both classes are required for AUC
+    # Both classes required for AUC
     if y_test.nunique() < 2:
         st.error(
             "The test dataset must contain both target classes "
@@ -466,7 +461,7 @@ try:
             use_container_width=True
         )
 
-        # Complete metrics comparison chart
+        # Complete metrics comparison
         with st.expander("View all six metrics"):
 
             all_metrics = comparison_df.set_index("Model")[
@@ -479,8 +474,8 @@ try:
             )
 
         st.caption(
-            "All five models are evaluated using the same uploaded "
-            "test dataset and their respective preprocessing methods. "
+            "All five models are evaluated using the same test dataset "
+            "and their respective preprocessing methods. "
             "No model retraining is performed."
         )
 
@@ -632,7 +627,7 @@ try:
         unsafe_allow_html=True
     )
 
-    with st.expander("View uploaded test data"):
+    with st.expander("View test data"):
 
         st.dataframe(
             test_df,
@@ -655,4 +650,4 @@ try:
 
 except Exception as exc:
 
-    st.error(f"Unable to evaluate the uploaded CSV: {exc}")
+    st.error(f"Unable to evaluate the dataset: {exc}")
