@@ -13,8 +13,7 @@ from sklearn.metrics import (
     f1_score,
     matthews_corrcoef,
     confusion_matrix,
-    ConfusionMatrixDisplay,
-    classification_report
+    ConfusionMatrixDisplay
 )
 
 
@@ -106,7 +105,7 @@ div[data-testid="stSidebar"] {
 # --------------------------------------------------
 
 st.markdown(
-    '<div class="main-title">🔬 Breast Cancer Classification - Assignment - Mohamed Shareef Thadathil</div>',
+    '<div class="main-title">🔬 Breast Cancer Classification</div>',
     unsafe_allow_html=True
 )
 
@@ -259,7 +258,7 @@ elif uploaded_file is not None:
 
 else:
 
-    st.info("Please upload a CSV file from the sidebar or load default data set.")
+    st.info("Please upload a CSV file from the sidebar.")
     st.stop()
 
 
@@ -600,19 +599,38 @@ try:
 
     with tab2:
 
-        report = classification_report(
-            y_test,
-            y_pred,
-            target_names=["Benign", "Malignant"],
-            output_dict=True,
-            zero_division=0
+        st.markdown("### Required Evaluation Metrics")
+
+        report_metrics = {
+            "Accuracy": accuracy_score(y_test, y_pred),
+            "AUC Score": roc_auc_score(y_test, y_prob),
+            "Precision": precision_score(
+                y_test, y_pred, zero_division=0
+            ),
+            "Recall": recall_score(
+                y_test, y_pred, zero_division=0
+            ),
+            "F1 Score": f1_score(
+                y_test, y_pred, zero_division=0
+            ),
+            "Matthews Correlation Coefficient (MCC)": matthews_corrcoef(
+                y_test, y_pred
+            )
+        }
+
+        report_df = pd.DataFrame(
+            list(report_metrics.items()),
+            columns=["Evaluation Metric", "Score"]
         )
 
-        report_df = pd.DataFrame(report).transpose()
+        report_df["Score"] = report_df["Score"].map(
+            lambda x: f"{x:.4f}"
+        )
 
         st.dataframe(
-            report_df.round(4),
-            use_container_width=True
+            report_df,
+            use_container_width=True,
+            hide_index=True
         )
 
 
@@ -633,6 +651,17 @@ try:
         )
 
 
+    # --------------------------------------------------
+    # 14. Footer
+    # --------------------------------------------------
+
+    st.divider()
+
+    st.caption(
+        "Target encoding: 0 = Benign | 1 = Malignant. "
+        "All models are loaded from saved artifacts. "
+        "No retraining is performed by this application."
+    )
 
 
 except Exception as exc:
